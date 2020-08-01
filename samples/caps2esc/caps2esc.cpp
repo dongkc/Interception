@@ -80,7 +80,7 @@ vector<InterceptionKeyStroke> caps2esc(const InterceptionKeyStroke &kstroke) {
         return kstrokes;
     }
 
-    // Enter key loginc
+    // ------------------------- Enter key logic begin ------------------
     if (kstroke == enter_down) {
         enter_is_down = true;
         return kstrokes;
@@ -114,6 +114,9 @@ vector<InterceptionKeyStroke> caps2esc(const InterceptionKeyStroke &kstroke) {
         return kstrokes;
     }
 
+    // ------------------------- Enter key logic end -------------------
+
+    // ------------------------- Ctrl key logic begin ------------------
 
     kstrokes.push_back(kstroke);
 
@@ -121,7 +124,8 @@ vector<InterceptionKeyStroke> caps2esc(const InterceptionKeyStroke &kstroke) {
 }
 
 int main() {
-    void *program_instance = try_open_single_program("407631B6-78D3-4EFC-A868-40BBB7204CF1");
+    void *program_instance = try_open_single_program(
+        "407631B6-78D3-4EFC-A868-40BBB7204CF1");
     if (!program_instance) {
         return 0;
     }
@@ -134,12 +138,15 @@ int main() {
 
     context = interception_create_context();
 
-    interception_set_filter(context, interception_is_keyboard,
+    interception_set_filter(context,
+                            interception_is_keyboard,
                             INTERCEPTION_FILTER_KEY_DOWN |
                             INTERCEPTION_FILTER_KEY_UP);
 
-    while (interception_receive(context, device = interception_wait(context),
-                                (InterceptionStroke *)&kstroke, 1) > 0) {
+    while (interception_receive(
+               context,
+               device = interception_wait(context),
+               (InterceptionStroke *)&kstroke, 1) > 0) {
         vector<InterceptionKeyStroke> kstrokes = caps2esc(kstroke);
 
         if (kstrokes.size() > 0) {
