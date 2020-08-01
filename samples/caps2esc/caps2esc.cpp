@@ -20,18 +20,21 @@ using namespace std;
 
 namespace scancode {
     enum {
-        esc       = 0x01,
-        ctrl      = 0x1D,
-        capslock  = 0x3A
+        esc      = 0x01,
+        enter    = 0x1C,
+        ctrl     = 0x1D,
+        capslock = 0x3A
     };
 }
 
 InterceptionKeyStroke
     esc_down      = {scancode::esc     , INTERCEPTION_KEY_DOWN, 0},
     ctrl_down     = {scancode::ctrl    , INTERCEPTION_KEY_DOWN, 0},
+    enter_down    = {scancode::enter   , INTERCEPTION_KEY_DOWN, 0},
     capslock_down = {scancode::capslock, INTERCEPTION_KEY_DOWN, 0},
     esc_up        = {scancode::esc     , INTERCEPTION_KEY_UP  , 0},
     ctrl_up       = {scancode::ctrl    , INTERCEPTION_KEY_UP  , 0},
+    enter_up      = {scancode::enter   , INTERCEPTION_KEY_UP  , 0},
     capslock_up   = {scancode::capslock, INTERCEPTION_KEY_UP  , 0};
 
 bool operator==(const InterceptionKeyStroke &first,
@@ -41,13 +44,20 @@ bool operator==(const InterceptionKeyStroke &first,
 
 vector<InterceptionKeyStroke> caps2esc(const InterceptionKeyStroke &kstroke) {
     static bool capslock_is_down = false, esc_give_up = false;
+    static bool enter_is_down = false, enter_give_up = false;
 
     vector<InterceptionKeyStroke> kstrokes;
+
+    if (kstroke == capslock_down) {
+        capslock_is_down = true;
+        return kstrokes;
+    }
 
     if (capslock_is_down) {
         if (kstroke == capslock_down || kstroke.code == scancode::ctrl) {
             return kstrokes;
         }
+
         if (kstroke == capslock_up) {
             if (esc_give_up) {
                 esc_give_up = false;
@@ -56,35 +66,56 @@ vector<InterceptionKeyStroke> caps2esc(const InterceptionKeyStroke &kstroke) {
                 kstrokes.push_back(esc_down);
                 kstrokes.push_back(esc_up);
             }
+
             capslock_is_down = false;
             return kstrokes;
         }
+
         if (!esc_give_up && !(kstroke.state & INTERCEPTION_KEY_UP)) {
             esc_give_up = true;
             kstrokes.push_back(ctrl_down);
         }
 
-        if (kstroke == esc_down)
-            kstrokes.push_back(capslock_down);
-        else if (kstroke == esc_up)
-            kstrokes.push_back(capslock_up);
-        else
-            kstrokes.push_back(kstroke);
-
-        return kstrokes;
-    }
-
-    if (kstroke == capslock_down) {
-        capslock_is_down = true;
-        return kstrokes;
-    }
-
-    if (kstroke == esc_down)
-        kstrokes.push_back(capslock_down);
-    else if (kstroke == esc_up)
-        kstrokes.push_back(capslock_up);
-    else
         kstrokes.push_back(kstroke);
+        return kstrokes;
+    }
+
+    // Enter key loginc
+    if (kstroke == enter_down) {
+        enter_is_down = true;
+        return kstrokes;
+    }
+
+    if (enter_is_down) {
+        if (kstroke == enter_down ||
+            kstroke.code == scancode::ctrl) {
+            return kstrokes;
+        }
+
+        if (kstroke == enter_up) {
+            if (enter_give_up) {
+                enter_give_up = false;
+                kstrokes.push_back(ctrl_up);
+            } else {
+                kstrokes.push_back(enter_down);
+                kstrokes.push_back(enter_up);
+            }
+
+            enter_is_down = false;
+            return kstrokes;
+        }
+
+        if (!enter_give_up && !(kstroke.state & INTERCEPTION_KEY_UP)) {
+            enter_give_up = true;
+            kstrokes.push_back(ctrl_down);
+        }
+
+        kstrokes.push_back(kstroke);
+        return kstrokes;
+    }
+
+
+    kstrokes.push_back(kstroke);
 
     return kstrokes;
 }
@@ -119,6 +150,7 @@ int main() {
     }
 
     interception_destroy_context(context);
+
 
     close_single_program(program_instance);
 }
