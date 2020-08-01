@@ -45,6 +45,7 @@ bool operator==(const InterceptionKeyStroke &first,
 vector<InterceptionKeyStroke> caps2esc(const InterceptionKeyStroke &kstroke) {
     static bool capslock_is_down = false, esc_give_up = false;
     static bool enter_is_down = false, enter_give_up = false;
+    static bool ctrl_is_down = false, ctrl_give_up = false;
 
     vector<InterceptionKeyStroke> kstrokes;
 
@@ -117,6 +118,39 @@ vector<InterceptionKeyStroke> caps2esc(const InterceptionKeyStroke &kstroke) {
     // ------------------------- Enter key logic end -------------------
 
     // ------------------------- Ctrl key logic begin ------------------
+    if (kstroke == ctrl_down) {
+        ctrl_is_down = true;
+        return kstrokes;
+    }
+
+    if (ctrl_is_down) {
+        if (kstroke == ctrl_down) {
+            return kstrokes;
+        }
+
+        if (kstroke == ctrl_up) {
+            if (ctrl_give_up) {
+                ctrl_give_up = false;
+                kstrokes.push_back(ctrl_up);
+            } else {
+                kstrokes.push_back(esc_down);
+                kstrokes.push_back(esc_up);
+            }
+
+            ctrl_is_down = false;
+            return kstrokes;
+        }
+
+        if (!ctrl_give_up && !(kstroke.state & INTERCEPTION_KEY_UP)) {
+            ctrl_give_up = true;
+            kstrokes.push_back(ctrl_down);
+        }
+
+        kstrokes.push_back(kstroke);
+        return kstrokes;
+    }
+    // ------------------------- Ctrl key logic end ------------------
+
 
     kstrokes.push_back(kstroke);
 
